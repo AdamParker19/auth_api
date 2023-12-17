@@ -1,12 +1,14 @@
-const axios = require("axios");
-const redisClient = require("../config/databases/redis");
+import axios from "axios";
+import { Request, Response } from 'express';
+import redisClient from "../config/databases/redis";
+import { ProductInterface, ProductResponseInterface } from "../interfaces/productInterface";
 
 class ProductController {
   constructor() {}
 
-  list = async (req, res) => {
+  list = async (req: Request, res: Response) : Promise<ProductResponseInterface> =>  {
     try {
-      redisClient.get("products", async (err, data) => {
+      return redisClient.get("products", async (err, data) => {
         if (err) {
           console.error("***REDIS ERROR***", err.message);
         }
@@ -16,11 +18,10 @@ class ProductController {
           const parsedData = JSON.parse(data);
           return res.json(parsedData);
         } else {
-          console.log("not in cache");
-          const { data } = await axios.get(`${process.env.PRODUCTS_URL}`);
+          const { data } : ProductResponseInterface = await axios.get(`${process.env.PRODUCTS_URL}`);
           //caching products data for next 24 hours
           redisClient.setex("products", 86400, JSON.stringify(data.products));
-          res.status(201).send(data.products);
+          return res.status(201).send(data);
         }
       });
     } catch (error) {
@@ -30,4 +31,4 @@ class ProductController {
   };
 }
 
-module.exports = ProductController;
+export default ProductController;

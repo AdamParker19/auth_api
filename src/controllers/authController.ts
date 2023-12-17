@@ -1,15 +1,21 @@
-const User = require("../models/user");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { Request, Response } from 'express';
+import UserDao from '../daos/userDao';
+import signupInterface from '../interfaces/signupInterface';
 
 class AuthController {
-  constructor() {}
+  private userDao : UserDao
+  
+  constructor() {
+    this.userDao = new UserDao();
+  }
 
-  hashPass = async (password) => {
+  hashPass = async (password: String) => {
     try {
-      const saltRounds = process.env.SALT_ROUNDS;
-      const salt = await bcrypt.genSalt(saltRounds);
-      const hash = await bcrypt.hash(password, salt);
+      const saltRounds : Number = parseInt(process.env.SALT_ROUNDS);
+      const salt : String = await bcrypt.genSalt(saltRounds);
+      const hash : String = await bcrypt.hash(password, salt);
       return hash;
     } catch (error) {
       console.error("****HASHING ERROR******", error.message);
@@ -17,12 +23,12 @@ class AuthController {
     }
   };
 
-  signIn = async (req, res) => {
+  signIn = async (req: Request, res: Response) => {
     try {
-      const { username, password } = req.body;
+      const { username, password } : signupInterface = req.body as signupInterface;
 
       // Check if the username exists
-      const user = await User.findOne({ username });
+      const user = await this.userDao.getUser(username);
 
       if (!user) {
         return res
@@ -41,7 +47,7 @@ class AuthController {
 
       // Create a JSON Web Token (JWT)
       const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET_KEY, {
-        expiresIn: "1h",
+        expiresIn: "24h",
       });
 
       // Send the token in the response
@@ -52,19 +58,19 @@ class AuthController {
     }
   };
 
-  signUp = async (user) => {
+  signUp = async (req: Request, res: Response) => {
     try {
-      const password = await this.hashPass(user.password);
-      const newUser = new User({ ...user, password });
-      await newUser.save();
-      return newUser;
+      const {username, password} : signupInterface = req.body as signupInterface
+      const hashedPassword = await this.hashPass(password);
+      const newUser = await this.userDao.addUser({username, password:hashedPassword});
+      res.status(201).send({newUser});
     } catch (error) {
       console.error("***SIGNUP ERROR****", error.message);
       return res.status(400).json({ message: error.message });
     }
   };
 
-  signOut = async (req, res) => {
+  signOut = async (req: Request, res: Response) => {
     try {
       res.redirect("/");
     } catch (error) {
@@ -74,4 +80,4 @@ class AuthController {
   };
 }
 
-module.exports = AuthController;
+export default AuthController;

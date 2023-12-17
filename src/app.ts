@@ -1,22 +1,18 @@
 require("dotenv").config();
 
-const mongoConnect = require("./config/databases/mongodb.js");
+import mongoConnect from './config/databases/mongodb';
 const port = process.env.PORT || 3000;
-const express = require("express");
+import express from 'express';
 const app = express();
 
 // Middleware for parsing JSON requests
 app.use(express.json());
 
 // Import routes
-const auth = require("./routes/auth_routes.js");
-const product = require("./routes/product_routes.js");
+import { createRoutes } from "./routes/routes";
 
-// Auth routes
-app.use("/auth", auth);
-
-//Product routes
-app.use("/products", product);
+// All api routes
+app.use("/api", createRoutes());
 
 app.use("/", (req, res) => res.status(201).send("Welcome"));
 
